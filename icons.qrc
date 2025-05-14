@@ -1,0 +1,27 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Icons/clean.png</file>
+        <file>Icons/Color.png</file>
+        <file>Icons/Dropper.png</file>
+        <file>Icons/eraser.png</file>
+        <file>Icons/eye-dropper-half.png</file>
+        <file>Icons/fill (1).png</file>
+        <file>Icons/fill.png</file>
+        <file>Icons/flip-horizontal.png</file>
+        <file>Icons/makeup-brush.png</file>
+        <file>Icons/pencil (1).png</file>
+        <file>Icons/Pencil.png</file>
+        <file>Icons/redo-alt.png</file>
+        <file>Icons/resize.png</file>
+        <file>Icons/rotate-left.png</file>
+        <file>Icons/search.png</file>
+        <file>Icons/square-dashed (1).png</file>
+        <file>Icons/square-dashed.png</file>
+        <file>Icons/tool-crop.png</file>
+        <file>Icons/undo-alt.png</file>
+        <file>Icons/mirror.png</file>
+        <file>Icons/refresh.png</file>
+        <file>Icons/rotate-right.png</file>
+        <file>Icons/palette.png</file>
+    </qresource>
+</RCC>

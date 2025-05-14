@@ -82,6 +82,13 @@ public:
     bool canUndo() const;
     bool canRedo() const;
 
+    QRect getSelectionRect() const{
+        QRect imageRect;
+        imageRect.setTopLeft(widgetToImage(m_selectionRect.topLeft()));
+        imageRect.setBottomRight(widgetToImage(m_selectionRect.bottomRight()));
+        imageRect = imageRect.normalized();
+        return imageRect;
+    }
 protected:
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;

@@ -16,6 +16,8 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 private:
+    const QByteArray PROJECT_MAGIC_NUMBER = QByteArrayLiteral("\x1A\xBC\xDE\xF0MyProj");
+    //const int PROJECT_FILE_VERSION = 1;
     QMenu* m_fileMenu;
     QAction* m_newFileAction;
     QAction* m_openFileAction;
@@ -112,7 +114,7 @@ private slots:
     //Advanced options' slots
     void onNoiseReductionClicked();
     void onEdgeDetectionClicked();
-    void onCreateProcessClicked();
-    void onExecuteProcessClicked();
+//    void onCreateProcessClicked();
+//    void onExecuteProcessClicked();
 };
 #endif // MAINWINDOW_H

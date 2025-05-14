@@ -443,37 +443,56 @@ void Canvas::copy(){
         return;
     }
 
-    QRect validRect = m_selectionRect.intersected(m_image.rect());
+    QRect imageRect;
+    imageRect.setTopLeft(widgetToImage(m_selectionRect.topLeft()));
+    imageRect.setBottomRight(widgetToImage(m_selectionRect.bottomRight()));
+    imageRect = imageRect.normalized();
+
+    QRect validRect = imageRect.intersected(QRect(0, 0, m_image.width(), m_image.height()));
     if (validRect.isEmpty()) {
         return;
     }
 
     m_clipboardImage = m_image.copy(validRect);
-    m_clipboardPosition = validRect.topLeft();
-    m_clipboardAvailable = true;
 }
 
 void Canvas::cut() {
-    copy();
-
-    if (!m_clipboardAvailable) {
+    if (!m_selectionRect.isValid() || m_selectionRect.isEmpty()) {
         return;
     }
 
+    QRect imageRect;
+    imageRect.setTopLeft(widgetToImage(m_selectionRect.topLeft()));
+    imageRect.setBottomRight(widgetToImage(m_selectionRect.bottomRight()));
+    imageRect = imageRect.normalized();
+
+    QRect validRect = imageRect.intersected(QRect(0, 0, m_image.width(), m_image.height()));
+    if (validRect.isEmpty()) {
+        return;
+    }
+
+    pushUndoState();
+    m_clipboardImage = m_image.copy(validRect);
+
     QPainter painter(&m_image);
-    painter.fillRect(m_selectionRect, Qt::white);
+    painter.setCompositionMode(QPainter::CompositionMode_Clear);
+    painter.fillRect(validRect, Qt::transparent);
+    painter.end();
+
+    if (m_rubberBand) {
+        m_rubberBand->hide();
+    }
+    m_selectionRect = QRect(); // reset
     update();
 }
 
 void Canvas::paste(){
-    if (!m_clipboardAvailable) {
+    if (m_clipboardImage.isNull())
         return;
-    }
 
-    m_pastePosition = QPoint(50, 50);
-    m_pastedImage = m_clipboardImage;
-    m_pastingInProgress = false;
-
+    pushUndoState();
+    QPainter painter(&m_image);
+    painter.drawImage(QPoint(0, 0), m_clipboardImage);
     update();
 }
 

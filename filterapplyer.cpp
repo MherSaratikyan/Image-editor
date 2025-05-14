@@ -4,6 +4,7 @@
 #include <QtMath>
 #include <QVector>
 #include <algorithm>
+#include <QRandomGenerator>
 
 FilterApplyer::FilterApplyer()
 {
@@ -53,11 +54,60 @@ QImage FilterApplyer::applyBrightnessFilter(const QImage& src, int brightness){
 }
 
 QImage FilterApplyer::applyBlur(const QImage& src){
-    QImage dst = src;
-    QPainter painter(&dst);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
-    painter.drawImage(QRect(0, 1, dst.width() - 2, dst.height() - 2), dst);
-    return dst;
+    int width = src.width();
+    int height = src.height();
+
+    QImage dstImage = src;
+
+    static const double kernel[5][5] = {
+        {0.002969016737030329, 0.013306209891221683, 0.02193823125743577,  0.013306209891221683, 0.002969016737030329},
+        {0.013306209891221683, 0.05963429536484059,  0.09832033134846331,  0.05963429536484059,  0.013306209891221683},
+        {0.02193823125743577,  0.09832033134846331,  0.16209986390734045,  0.09832033134846331,  0.02193823125743577 },
+        {0.013306209891221683, 0.05963429536484059,  0.09832033134846331,  0.05963429536484059,  0.013306209891221683},
+        {0.002969016737030329, 0.013306209891221683, 0.02193823125743577,  0.013306209891221683, 0.002969016737030329}
+    };
+    int kernelRadius = 2;
+    if (width < (2 * kernelRadius + 1) || height < (2 * kernelRadius + 1)) {
+        qWarning("Image is smaller than the kernel size. Returning original image.");
+        return dstImage;
+    }
+
+    for (int y = kernelRadius; y < height - kernelRadius; ++y) {
+        for (int x = kernelRadius; x < width - kernelRadius; ++x) {
+            double sumR = 0.0, sumG = 0.0, sumB = 0.0, sumA = 0.0;
+
+            for (int j = -kernelRadius; j <= kernelRadius; ++j) {
+                for (int i = -kernelRadius; i <= kernelRadius; ++i) {
+                    QColor neighborPixelColor = src.pixelColor(x + i, y + j);
+
+                    double kernelWeight = kernel[j + kernelRadius][i + kernelRadius];
+
+                    sumR += neighborPixelColor.red()   * kernelWeight;
+                    sumG += neighborPixelColor.green() * kernelWeight;
+                    sumB += neighborPixelColor.blue()  * kernelWeight;
+
+                    if (src.hasAlphaChannel()) {
+                        sumA += neighborPixelColor.alpha() * kernelWeight;
+                    }
+                }
+            }
+
+
+            int finalR = qBound(0, static_cast<int>(std::round(sumR)), 255);
+            int finalG = qBound(0, static_cast<int>(std::round(sumG)), 255);
+            int finalB = qBound(0, static_cast<int>(std::round(sumB)), 255);
+            int finalA;
+
+            if (src.hasAlphaChannel()) {
+                finalA = qBound(0, static_cast<int>(std::round(sumA)), 255);
+                dstImage.setPixelColor(x, y, QColor(finalR, finalG, finalB, finalA));
+            } else {
+                dstImage.setPixelColor(x, y, QColor(finalR, finalG, finalB));
+            }
+        }
+    }
+
+    return dstImage;
 }
 
 QImage FilterApplyer::applySepia(const QImage& src){
@@ -191,6 +241,99 @@ QImage FilterApplyer::applyVignete(const QImage& src){
 
     return dst;
 }
+void FilterApplyer::convolveDoubleKernel(const QImage& inputImg, QImage& outputImg){
+    double kernel[7][7] = {
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0.143, 0.143, 0.143, 0.143, 0.143, 0.143, 0.143},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+    };
+
+    int imgWidth = inputImg.width();
+    int imgHeight = inputImg.height();
+
+    int kernelHeight = 7;
+    int kernelWidth = 7;
+    int kh_half = kernelHeight / 2;
+    int kw_half = kernelWidth / 2;
+
+    outputImg = inputImg.copy();
+    for (int y = kh_half; y < imgHeight - kh_half; ++y) {
+        for (int x = kw_half; x < imgWidth - kw_half; ++x) {
+            double sumR = 0.0, sumG = 0.0, sumB = 0.0;
+
+            for (int j_k = 0; j_k < kernelHeight; ++j_k) { // kernel y
+                for (int i_k = 0; i_k < kernelWidth; ++i_k) { // kernel x
+                    // Image pixel coordinates
+                    int ix = x - kw_half + i_k;
+                    int iy = y - kh_half + j_k;
+
+                    QColor currentPixelColor(inputImg.pixel(ix, iy));
+                    double weight = kernel[j_k][i_k];
+
+                    sumR += currentPixelColor.red() * weight;
+                    sumG += currentPixelColor.green() * weight;
+                    sumB += currentPixelColor.blue() * weight;
+                }
+            }
+            QColor originalCenterColor(inputImg.pixel(x, y));
+            outputImg.setPixel(x, y, qRgba(
+                qBound(0, static_cast<int>(std::round(sumR)), 255),
+                qBound(0, static_cast<int>(std::round(sumG)), 255),
+                qBound(0, static_cast<int>(std::round(sumB)), 255),
+                originalCenterColor.alpha()
+            ));
+        }
+    }
+}
+
+QImage FilterApplyer::applyDeBlur(const QImage& src){
+    int iterations{3};
+//    double psfKernel[3][3] = {
+//        {0, 0, 1.0/9},
+//        {1.0/9, 1.0/9, 1.0/9},
+//        {1.0/9, 1.0/9, 1.0/9}
+//    };
+    int beta = 1;
+
+    QImage currentEstimate = src.copy();
+    QImage reblurredEstimate(src.width(), src.height(), src.format());
+
+    for(int i = 0; i < iterations; ++i){
+        convolveDoubleKernel(currentEstimate, reblurredEstimate);
+
+        QImage nextEstimate = currentEstimate.copy();
+        for(int y = 0; y < src.height(); ++y){
+            for(int x = 0; x < src.width(); ++x){
+                QColor originalBlurredPixel(src.pixel(x, y));
+                QColor currentEstimatePixel(currentEstimate.pixel(x, y));
+                QColor reblurredCurrentPixel(reblurredEstimate.pixel(x, y));
+
+                double diffR = originalBlurredPixel.red()   - reblurredCurrentPixel.red();
+                double diffG = originalBlurredPixel.green() - reblurredCurrentPixel.green();
+                double diffB = originalBlurredPixel.blue()  - reblurredCurrentPixel.blue();
+
+                double newR = currentEstimatePixel.red()   + beta * diffR;
+                double newG = currentEstimatePixel.green() + beta * diffG;
+                double newB = currentEstimatePixel.blue()  + beta * diffB;
+
+                nextEstimate.setPixel(x, y, qRgba(
+                    qBound(0, static_cast<int>(std::round(newR)), 255),
+                    qBound(0, static_cast<int>(std::round(newG)), 255),
+                    qBound(0, static_cast<int>(std::round(newB)), 255),
+                    originalBlurredPixel.alpha()
+                ));
+            }
+        }
+
+        currentEstimate = nextEstimate;
+    }
+
+    return currentEstimate;
+}
 
 QImage FilterApplyer::applyNoiseReduction(const QImage &src){
     QImage dst(src.width(), src.height(), src.format());
@@ -257,4 +400,5 @@ QImage FilterApplyer::applyEdgeDetection(const QImage &src){
 
     return dst;
 }
+
 

@@ -3,6 +3,7 @@
 #include <QSqlError>
 #include <QVariant>
 #include <QDebug>
+#include <QDir>
 
 DatabaseManager* DatabaseManager::m_instance = nullptr;
 
@@ -45,6 +46,10 @@ bool DatabaseManager::createTables()
     if(!q.exec("PRAGMA foreign_keys = ON")){
         return false;
     }
+//    if (!q.exec("DROP TABLE IF EXISTS projects")) {
+//        qDebug() << "Failed to delete projects table:" << q.lastError().text();
+//        return false;
+//    }
     if (!q.exec("CREATE TABLE IF NOT EXISTS projects ("
                 "project_id INTEGER PRIMARY KEY AUTOINCREMENT, "
                 "project_name TEXT, "
@@ -55,27 +60,37 @@ bool DatabaseManager::createTables()
         return false;
     }
 
+//    if (!q.exec("DROP TABLE IF EXISTS images")) {
+//        qDebug() << "Failed to delete projects table:" << q.lastError().text();
+//        return false;
+//    }
+
     if (!q.exec("CREATE TABLE IF NOT EXISTS images ("
                 "image_id INTEGER PRIMARY KEY AUTOINCREMENT, "
                 "image_name TEXT, "
-                "project_id INTEGER, "
+                "project_path TEXT, "
                 "created_at TEXT, "
                 "last_modified_at TEXT, "
-                "FOREIGN KEY(project_id) REFERENCES projects(project_id) ON DELETE CASCADE)")) {
+                "FOREIGN KEY(project_path) REFERENCES projects(project_path) ON DELETE CASCADE)")) {
         qDebug() << "Failed to create images table:" << q.lastError().text();
         return false;
     }
 
-    if (!q.exec("CREATE TABLE IF NOT EXISTS procedures ("
-                "procedure_id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                "procedure_name TEXT, "
-                "project_id INTEGER, "
-                "description TEXT, "
-                "procedure_sequence TEXT, "
-                "FOREIGN KEY(project_id) REFERENCES projects(project_id) ON DELETE CASCADE)")) {
-        qDebug() << "Failed to create procedures table:" << q.lastError().text();
+    if (!q.exec("DROP TABLE IF EXISTS procedures")) {
+        qDebug() << "Failed to delete projects table:" << q.lastError().text();
         return false;
     }
+
+//    if (!q.exec("CREATE TABLE IF NOT EXISTS procedures ("
+//                "procedure_id INTEGER PRIMARY KEY AUTOINCREMENT, "
+//                "procedure_name TEXT, "
+//                "project_id INTEGER, "
+//                "description TEXT, "
+//                "procedure_sequence TEXT, "
+//                "FOREIGN KEY(project_id) REFERENCES projects(project_id) ON DELETE CASCADE)")) {
+//        qDebug() << "Failed to create procedures table:" << q.lastError().text();
+//        return false;
+//    }
     return true;
 }
 
@@ -107,13 +122,13 @@ QList<int> DatabaseManager::listAllProjects()
     return projectIds;
 }
 
-bool DatabaseManager::createImage(int projectId, const QString &imageName)
+bool DatabaseManager::createImage(const QString& projectPath, const QString &imageName)
 {
     QSqlQuery q(m_db);
-    q.prepare("INSERT INTO images (image_name, created_at, last_modified_at, project_id,) "
-              "VALUES (:name, DATETIME('now'), DATETIME('now')), :project_id");
+    q.prepare("INSERT INTO images (image_name, created_at, last_modified_at, project_path) "
+              "VALUES (:name, DATETIME('now'), DATETIME('now'), :project_path)");
     q.bindValue(":name", imageName);
-    q.bindValue(":project_id", projectId);
+    q.bindValue(":project_path", projectPath);
     if (!q.exec()) {
         qDebug() << "Failed to create image:" << q.lastError().text();
         return false;
@@ -135,6 +150,34 @@ bool DatabaseManager::createProcedure(int projectId, const QString &procName, co
         return false;
     }
     return true;
+}
+
+QString DatabaseManager::getImage(const QString& projectPath){
+    if (!m_db.isOpen()) {
+        qDebug() << "Database is not open!";
+        return QString("");
+    }
+
+    QSqlQuery q(m_db);
+    q.prepare("SELECT images.image_name FROM images "
+              "JOIN projects ON images.project_path = projects.project_path "
+              "WHERE projects.project_path = :projectPath LIMIT 1");
+    q.bindValue(":projectPath", projectPath);
+
+    if (!q.exec()) {
+        qDebug() << "SQL query failed:" << q.lastError().text();
+        return QString("");
+    }
+
+    if (q.next()) {
+        QString imageName = q.value(0).toString();
+        QDir projectDir(projectPath);
+        qDebug() << "Image found:" << imageName;
+        return projectDir.filePath("assets/" + imageName);
+    } else {
+        qDebug() << "No image found for project:" << projectPath;
+        return QString("");
+    }
 }
 
 QSqlDatabase& DatabaseManager::db()

@@ -21,6 +21,10 @@
 #include <QVector>
 #include <QSpinBox>
 #include <QInputDialog>
+#include <QMessageBox>
+#include <QCoreApplication>
+#include <fstream>
+#include <QCryptographicHash>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -60,11 +64,15 @@ void MainWindow::buildMenuBar()
     buildFileMenu();
     buildEditMenu();
 
-    m_undoOption = new QAction("Undo", this);
+    m_undoOption = new QAction(QIcon(":/Icons/undo-alt.png"), "Undo", this);
+    m_undoOption->setToolTip("Undo");
+//    m_undoOption->setIcon(QIcon(":/Icons/undo_alt.png"));
     connect(m_undoOption, &QAction::triggered, this, &MainWindow::onUndoClicked);
     menuBar()->addAction(m_undoOption);
 
-    m_redoOption = new QAction("Redo", this);
+    m_redoOption = new QAction(QIcon(":/Icons/redo-alt.png"),"Redo", this);
+    m_redoOption->setToolTip("Redo");
+//    m_redoOption->setIcon(QIcon(":/Icons/redo_alt.png"));
     connect(m_redoOption, &QAction::triggered, this, &MainWindow::onRedoClicked);
     menuBar()->addAction(m_redoOption);
 }
@@ -115,18 +123,19 @@ void MainWindow::createMainToolBar(){
 void MainWindow::buildGeometricOperationsSection()
 {
     QToolButton *rotateBtn = new QToolButton(this);
-    rotateBtn->setText("Rotate");
+    rotateBtn->setIcon(QIcon(":/Icons/refresh.png"));
+    rotateBtn->setToolTip("Rotate");
     QMenu *rotateMenu = new QMenu(rotateBtn);
 
-    QAction *rotateLeft  = new QAction("90° Left",  rotateMenu);
+    QAction *rotateLeft  = new QAction(QIcon(":/Icons/rotate-left.png"),"90° Left",  rotateMenu);
     rotateLeft->setCheckable(true);
     connect(rotateLeft, &QAction::triggered, this, &MainWindow::onRotateLeftCLicked);
 
-    QAction *rotateRight = new QAction("90° Right", rotateMenu);
+    QAction *rotateRight = new QAction(QIcon(":/Icons/rotate-right.png"),"90° Right", rotateMenu);
     rotateRight->setCheckable(true);
     connect(rotateRight, &QAction::triggered, this, &MainWindow::onRotateRightClicked);
 
-    QAction *rotate180   = new QAction("180°", rotateMenu);
+    QAction *rotate180   = new QAction(QIcon(":/Icons/refresh.png"), "180°", rotateMenu);
     rotate180->setCheckable(true);
     connect(rotate180, &QAction::triggered, this, &MainWindow::onRotate180Clicked);
 
@@ -137,7 +146,8 @@ void MainWindow::buildGeometricOperationsSection()
     rotateBtn->setPopupMode(QToolButton::MenuButtonPopup);
 
     QToolButton *flipBtn = new QToolButton(this);
-    flipBtn->setText("Flip");
+    flipBtn->setIcon(QIcon(":/Icons/mirror.png"));
+    flipBtn->setToolTip("Flip");
     QMenu *flipMenu = new QMenu(flipBtn);
 
     QAction *flipH = new QAction("Horizontal", flipMenu);
@@ -153,10 +163,10 @@ void MainWindow::buildGeometricOperationsSection()
     flipBtn->setMenu(flipMenu);
     flipBtn->setPopupMode(QToolButton::MenuButtonPopup);
 
-    QAction *cropAction = new QAction("Crop", this);
+    QAction *cropAction = new QAction(QIcon(":/Icons/tool-crop.png"), "Crop", this);
     connect(cropAction, &QAction::triggered, this, &MainWindow::onCropClicked);
 
-    QAction *resizeAction = new QAction("Resize", this);
+    QAction *resizeAction = new QAction(QIcon(":/Icons/resize.png"),"Resize", this);
     connect(resizeAction, &QAction::triggered, this, &MainWindow::onResizeClicked);
 
     m_toolBar->addWidget(rotateBtn);
@@ -186,9 +196,15 @@ void MainWindow::buildToolsSection()
 
     // first row
     QHBoxLayout *firstRow = new QHBoxLayout();
-    QPushButton *selectorBtn = new QPushButton("Selector");
-    QPushButton *penBtn      = new QPushButton("Pen");
-    QPushButton *fillBtn     = new QPushButton("Fill");
+    QPushButton *selectorBtn = new QPushButton("");
+    selectorBtn->setIcon(QIcon(":/Icons/square-dashed (1).png"));
+    selectorBtn->setToolTip("Select");
+    QPushButton *penBtn      = new QPushButton("");
+    penBtn->setIcon(QIcon(":/Icons/pencil (1).png"));
+    penBtn->setToolTip("Pencil");
+    QPushButton *fillBtn = new QPushButton("");
+    fillBtn->setIcon(QIcon(":/Icons/fill.png"));
+    fillBtn->setToolTip("Fill");
 
     connect(selectorBtn, &QPushButton::clicked, this, &MainWindow::onSelectClicked);
     connect(penBtn,      &QPushButton::clicked, this, &MainWindow::onPenClicked);
@@ -200,9 +216,15 @@ void MainWindow::buildToolsSection()
 
     // second row
     QHBoxLayout *secondRow = new QHBoxLayout();
-    QPushButton *eraserBtn  = new QPushButton("Eraser");
-    QPushButton *pickBtn    = new QPushButton("Pick");
-    QPushButton *magnifyBtn = new QPushButton("Magnify");
+    QPushButton *eraserBtn  = new QPushButton("");
+    eraserBtn->setIcon(QIcon(":/Icons/eraser.png"));
+    eraserBtn->setToolTip("Eraser");
+    QPushButton *pickBtn    = new QPushButton("");
+    pickBtn->setIcon(QIcon(":/Icons/eye-dropper-half.png"));
+    pickBtn->setToolTip("Color pick");
+    QPushButton *magnifyBtn = new QPushButton("");
+    magnifyBtn->setIcon(QIcon(":/Icons/search.png"));
+    magnifyBtn->setToolTip("Magnify");
 
     connect(eraserBtn,  &QPushButton::clicked, this, &MainWindow::onEraseClicked);
     connect(pickBtn,    &QPushButton::clicked, this, &MainWindow::onPickClicked);
@@ -223,6 +245,7 @@ void MainWindow::buildToolsSection()
 void MainWindow::buildBrushMenu()
 {
     QComboBox *brushSelector = new QComboBox(this);
+    brushSelector->addItem(QIcon(":/Icons/makeup-brush.png"), "");
     brushSelector->addItem("Solid");
     brushSelector->addItem("Dense1");
     brushSelector->addItem("Dense2");
@@ -279,7 +302,7 @@ void MainWindow::buildColorMenu()
 
      updateCurrentColorSwatch(Qt::black);
 
-     QAction *pickAnyColorAction = new QAction("Pick Color...", this);
+     QAction *pickAnyColorAction = new QAction(QIcon(":/Icons/palette.png"),"Pick Color...", this);
      connect(pickAnyColorAction, &QAction::triggered, this, &MainWindow::onColorPanelClicked);
 
      m_toolBar->addAction(pickAnyColorAction);
@@ -316,17 +339,18 @@ void MainWindow::buildAdvancedOperationsSection()
     QAction *edgeDetectionAction  = new QAction("Edge Detection", advancedMenu);
     connect(edgeDetectionAction, &QAction::triggered, this, &MainWindow::onEdgeDetectionClicked);
 
-    QMenu *processesSubMenu = new QMenu("Processes", advancedMenu);
-    QAction *createProcessAction  = new QAction("Create Process", processesSubMenu);
-    QAction *executeProcessAction = new QAction("Execute Process", processesSubMenu);
-    connect(createProcessAction,  &QAction::triggered, this, &MainWindow::onCreateProcessClicked);
-    connect(executeProcessAction, &QAction::triggered, this, &MainWindow::onExecuteProcessClicked);
-    processesSubMenu->addAction(createProcessAction);
-    processesSubMenu->addAction(executeProcessAction);
+
+//    QMenu *processesSubMenu = new QMenu("Processes", advancedMenu);
+//    QAction *createProcessAction  = new QAction("Create Process", processesSubMenu);
+//    QAction *executeProcessAction = new QAction("Execute Process", processesSubMenu);
+//    connect(createProcessAction,  &QAction::triggered, this, &MainWindow::onCreateProcessClicked);
+//    connect(executeProcessAction, &QAction::triggered, this, &MainWindow::onExecuteProcessClicked);
+//    processesSubMenu->addAction(createProcessAction);
+//    processesSubMenu->addAction(executeProcessAction);
 
     advancedMenu->addAction(noiseReductionAction);
     advancedMenu->addAction(edgeDetectionAction);
-    advancedMenu->addMenu(processesSubMenu);
+//    advancedMenu->addMenu(processesSubMenu);
 
     advancedBtn->setMenu(advancedMenu);
     advancedBtn->setPopupMode(QToolButton::InstantPopup);
@@ -406,6 +430,8 @@ void MainWindow::onFilterChosen(const QString& name){
         m_canvas->setImage(FilterApplyer::applyPixelate(m_canvas->getImage(), 30));
     } else if(name == "Vignette"){
         m_canvas->setImage(FilterApplyer::applyVignete(m_canvas->getImage()));
+    } else if(name == "Sharpen"){
+        m_canvas->setImage(FilterApplyer::applyDeBlur(m_canvas->getImage()));
     }
 }
 
@@ -418,6 +444,9 @@ void MainWindow::onNewProjectClicked(){
     QString projectName = QInputDialog::getText(this, "New Project", "Enter project name:");
     if (projectName.isEmpty()) return;
 
+    if (!projectName.endsWith(".proj"))
+        projectName += ".proj";
+
     QString dirPath = QFileDialog::getExistingDirectory(this, "Select Project Folder");
     if (dirPath.isEmpty()) return;
 
@@ -426,10 +455,24 @@ void MainWindow::onNewProjectClicked(){
     QString fullPath = projectDir.filePath(projectName);
 
     QDir(fullPath).mkdir("assets");
-    QDir(fullPath).mkdir("processes");
+    QString signature_file_path = fullPath + "/.signature_proj";
+    QFile signature_file(signature_file_path);
+    if(signature_file.open(QFile::WriteOnly)){
+//        QDataStream out(&signature_file);
+//        out.setByteOrder(QDataStream::LittleEndian);
+//        out<<PROJECT_MAGIC_NUMBER;
+//        signature_file.close();
+
+        signature_file.write(PROJECT_MAGIC_NUMBER);
+        signature_file.close();
+    }else{
+        QMessageBox::critical(this, "Error", "Could not create signature file.");
+        return;
+    }
 
     auto db = DatabaseManager::instance();
     db->openDatabase("projects_library");
+    //QMessageBox::information(this, "Info", projectName + " " + fullPath);
     db->createProject(projectName, fullPath);
 
     m_currentProjectPath = fullPath;
@@ -443,7 +486,8 @@ void MainWindow::onNewProjectClicked(){
 
 void MainWindow::onOpenFileClicked()
 {
-    QString file_path{QFileDialog::getOpenFileName(this, "Open image", QString(),"*.png *.jpeg *jpg *bmp")};
+    QString assetsDir = m_currentFilePath + "/assets";
+    QString file_path{QFileDialog::getOpenFileName(this, "Open image", assetsDir,"*.png *.jpeg *jpg *bmp")};
     if(!file_path.isEmpty()) {
         m_canvas->loadImage(file_path);
         statusBar()->showMessage("Image " + file_path + " loaded", 5000);
@@ -452,6 +496,47 @@ void MainWindow::onOpenFileClicked()
 }
 
 void MainWindow::onOpenProjectCLicked(){
+    QString dirPath = QFileDialog::getExistingDirectory(this, "Open Project Folder");
+    if (dirPath.isEmpty()) return;
+
+    QFile sigFile(dirPath + "/.signature_proj");
+    if (!sigFile.exists()){
+        QMessageBox::critical(this, "Error", "The project" + dirPath + " is invalid or has been corrupted");
+    }
+
+    if (!sigFile.open(QFile::ReadOnly)){
+        QMessageBox::critical(this, "Error", "Unable to access files of the directory" + dirPath + ". Permission denied");
+        return;
+    }
+
+    QByteArray storedHash = sigFile.readAll();
+    sigFile.close();
+
+//    QByteArray raw(reinterpret_cast<const char*>(&PROJECT_MAGIC_NUMBER), sizeof(PROJECT_MAGIC_NUMBER));
+//    QByteArray computedHash = QCryptographicHash::hash(raw, QCryptographicHash::Sha256);
+
+    if(storedHash != PROJECT_MAGIC_NUMBER){
+        QMessageBox::critical(this, "Error", "The project" + dirPath + " is invalid or has been corrupted");
+        return;
+    }
+
+    m_currentProjectPath = dirPath;
+    //m_currentProjectFile = projectFilePath;
+    auto db = DatabaseManager::instance();
+    db->openDatabase("projects_library");
+    QString imagePath = db->getImage(m_currentProjectPath);
+    QMessageBox::information(this, "Info", imagePath);
+    if (m_canvas) {
+        if(!imagePath.isEmpty()) {
+            m_canvas->loadImage(imagePath);
+        } else {
+            m_canvas->createBlank();
+        }
+    }
+
+    QFileInfo fileInfo(dirPath);
+    setWindowTitle(fileInfo.fileName() + " - " + QCoreApplication::applicationName());
+
     m_newFileAction->setEnabled(true);
     m_openFileAction->setEnabled(true);
 }
@@ -470,16 +555,25 @@ void MainWindow::onSaveClicked()
 
 void MainWindow::onSaveAsClicked()
 {
+    if (m_currentProjectPath.isEmpty()) {
+        QMessageBox::warning(this, "No Project", "Please open or create a project first.");
+        return;
+    }
+
+    QString assetsDir = m_currentProjectPath + "/assets";
     QString selectedFilter;
     QString filePath = QFileDialog::getSaveFileName(
         this,
         "Save Image As",
-        "Untitled.png",
+        assetsDir + "/Untitled.png",
         "PNG Image (*.png);;JPEG Image (*.jpg);;BMP Image (*.bmp);;All Files (*)",
         &selectedFilter
     );
 
-    if (filePath.isEmpty()) {
+    if (filePath.isEmpty()) return;
+
+    if (QFileInfo(filePath).absoluteFilePath().startsWith(assetsDir) == false) {
+        QMessageBox::critical(this, "Invalid Location", "Please save the image inside the project assets folder.");
         return;
     }
 
@@ -502,8 +596,10 @@ void MainWindow::onSaveAsClicked()
     m_canvas->setFilePath(filePath);
     m_canvas->saveImage();
 
+    auto db = DatabaseManager::instance();
+    db->openDatabase("projects_library");
 
-    // If success, store this as the new file path
+    db->createImage(m_currentProjectPath, (QFileInfo(filePath)).fileName());
 
     statusBar()->showMessage("Saved to " + filePath, 3000);
     setWindowTitle(QFileInfo(filePath).fileName() + " - My Image Editor");
@@ -695,15 +791,6 @@ void MainWindow::onEdgeDetectionClicked()
     m_canvas->setImage(FilterApplyer::applyEdgeDetection(m_canvas->getImage()));
 }
 
-void MainWindow::onCreateProcessClicked()
-{
-
-}
-
-void MainWindow::onExecuteProcessClicked()
-{
-
-}
 
 void MainWindow::setGlobalStyles() {
     QString globalStyle = R"(

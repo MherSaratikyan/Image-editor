@@ -9,7 +9,6 @@ CONFIG += c++11
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    canvas.cpp \
     databasemanager.cpp \
     filterapplyer.cpp \
     filterdialog.cpp \
@@ -23,7 +22,6 @@ SOURCES += \
     resizedialog.cpp
 
 HEADERS += \
-    canvas.h \
     databasemanager.h \
     filterapplyer.h \
     filterdialog.h \
@@ -39,3 +37,29 @@ HEADERS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+RESOURCES += \
+    icons.qrc
+
+DISTFILES += \
+    Icons/Color.png \
+    Icons/Dropper.png \
+    Icons/Pencil.png \
+    Icons/clean.png \
+    Icons/eraser.png \
+    Icons/eye-dropper-half.png \
+    Icons/fill (1).png \
+    Icons/fill.png \
+    Icons/flip-horizontal.png \
+    Icons/makeup-brush.png \
+    Icons/pencil (1).png \
+    Icons/redo-alt.png \
+    Icons/refresh.png \
+    Icons/resize.png \
+    Icons/rotate-left.png \
+    Icons/rotate-right.png \
+    Icons/search.png \
+    Icons/square-dashed (1).png \
+    Icons/square-dashed.png \
+    Icons/tool-crop.png \
+    Icons/undo-alt.png

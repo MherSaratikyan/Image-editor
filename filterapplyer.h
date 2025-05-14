@@ -20,6 +20,10 @@ public:
     static QImage applyPosterize(const QImage& src, int levels);
     static QImage applyPixelate(const QImage& src, int blockSize);
     static QImage applyVignete(const QImage& src);
+
+    static void convolveDoubleKernel(const QImage& inputImg, QImage& outImg);
+    static QImage applyDeBlur(const QImage& src);
+
     static QImage applyNoiseReduction(const QImage& src);
     static QImage applyEdgeDetection(const QImage& src);
 };

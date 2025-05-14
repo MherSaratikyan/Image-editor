@@ -17,9 +17,9 @@ public:
     bool createProject(const QString &name, const QString &path);
     QList<int> listAllProjects();
 
-    bool createImage(int projectId, const QString &imageName);
+    bool createImage(const QString& projectName, const QString &imageName);
     bool createProcedure(int projectId, const QString &procName, const QString &desc, const QString &seq);
-
+    QString getImage(const QString& projectPath);
     QSqlDatabase& db();
 
 private:
